@@ -27,11 +27,11 @@ class Value:
 
     def __mul__(self, other: Union[int, float, "Value"]) -> "Value":
         other = other if isinstance(other, Value) else Value(other)
-        out = ...
+        out = Value(self.data * other.data, (self, other), "*")
 
         def _backward():
-            self.grad += ...
-            other.grad += ...
+            self.grad += other.data * out.grad
+            other.grad += self.data * out.grad
 
         out._backward = _backward
 
@@ -41,29 +41,30 @@ class Value:
         assert isinstance(
             other, (int, float)
         ), "only supporting int/float powers for now"
-        out = ...
+        out = Value(self.data ** other, (self), f"**{other}")
 
         def _backward():
-            self.grad += ...
+            self.grad += out.grad * other * (self.data ** (other -1))
 
         out._backward = _backward
 
         return out
 
     def exp(self):
-        out = ...
+        import math
+        out = Value(math.exp(self.data), (self), "exp")
 
         def _backward():
-            self.grad += ...
+            self.grad += out.grad * math.exp(self.data)
 
         out._backward = _backward
         return out
 
     def relu(self):
-        out = ...
+        out = Value(self.data if self.data > 0 else 0, (self), "relu")
 
         def _backward():
-            self.grad += ...
+            self.grad += out.grad * (1 if self.data > 0 else 0)
 
         out._backward = _backward
 
@@ -87,7 +88,8 @@ class Value:
         # go one variable at a time and apply the chain rule to get its gradient
         self.grad = 1
         for v in reversed(topo):
-            # YOUR CODE GOES HERE
+            v._backward()
+            
 
     def __neg__(self):  # -self
         return self * -1
@@ -132,7 +134,6 @@ class Value:
 class Tensor:
     """
     Tensor is a kinda array with expanded functianality.
-
     Tensor is very convenient when it comes to matrix multiplication,
     for example in Linear layers.
     """
@@ -146,39 +147,39 @@ class Tensor:
         return Tensor(self.data + other)
 
     def __mul__(self, other):
-        return ...
+        return self.data * other
     
     def __truediv__(self, other):
-        return ...
+        return self.data / other
     
     def __floordiv__(self, other):
-        return ...
+        return self.data // other
     
     def __radd__(self, other):
-        return ...
+        return self.data + other
     
     def __rmull__(self, other):
-        return ...
+        return self.data * other
 
     def exp(self):
-        return ...
+        return np.exp(self.data)
 
     def dot(self, other):
         if isinstance(other, Tensor):
-            return ...
-        return ...
+            return (self.data @ other.data)
+        return self.data @ other
 
     def shape(self):
         return self.data.shape
 
     def argmax(self, dim=None):
-        return ...
+        return numpy.argmax(self.data, axis=dim)
 
     def max(self, dim=None):
-        return ...
+        return max(self.data[dim])
 
     def reshape(self, *args, **kwargs):
-        self.data = ...
+        self.data = np.reshape(self.data, (args, kwargs))
         return self
 
     def backward(self):
